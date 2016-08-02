@@ -1,9 +1,10 @@
-var _dec, _class2;
+var _dec, _class2, _dec2, _class3;
 
-import extend from 'extend';
+import mixinDeep from 'mixin-deep';
 import { getLogger } from 'aurelia-logging';
 import { inject, Container } from 'aurelia-dependency-injection';
-import { RelativeViewStrategy, useViewStrategy } from 'aurelia-templating';
+import { viewStrategy, useViewStrategy } from 'aurelia-templating';
+import { relativeToFile } from 'aurelia-path';
 
 export let Config = class Config {
 
@@ -19,7 +20,7 @@ export let Config = class Config {
   }
 
   configureDefaults(configs) {
-    extend(true, this.defaults, configs);
+    mixinDeep(this.defaults, configs);
 
     return this;
   }
@@ -28,14 +29,14 @@ export let Config = class Config {
     let namespace = Object.create(this.fetch(name));
     let config = { [name]: namespace };
 
-    extend(true, namespace, configs);
+    mixinDeep(namespace, configs);
     this.configure(config);
 
     return this;
   }
 
   configure(config) {
-    extend(true, this.namespaces, config);
+    mixinDeep(this.namespaces, config);
 
     return this;
   }
@@ -83,7 +84,7 @@ export let ViewManager = (_dec = inject(Config), _dec(_class2 = class ViewManage
     let namespaceOrDefault = Object.create(this.config.fetch(namespace));
     namespaceOrDefault.view = view;
 
-    let location = namespaceOrDefault.map[view] || namespaceOrDefault.location;
+    let location = (namespaceOrDefault.map || {})[view] || namespaceOrDefault.location;
 
     return render(location, namespaceOrDefault);
   }
@@ -106,9 +107,21 @@ function render(template, data) {
   return result;
 }
 
-export function resolvedView(namespace, view) {
-  let viewManager = Container.instance.get(ViewManager);
-  let path = viewManager.resolve(namespace, view);
+export let ResolvedViewStrategy = (_dec2 = viewStrategy(), _dec2(_class3 = class ResolvedViewStrategy {
+  constructor(namespace, view) {
+    this.namespace = namespace;
+    this.view = view;
+  }
 
-  return useViewStrategy(new RelativeViewStrategy(path));
+  loadViewFactory(viewEngine, compileInstruction, loadContext) {
+    let viewManager = viewEngine.container.get(ViewManager);
+    let path = viewManager.resolve(this.namespace, this.view);
+
+    compileInstruction.associatedModuleId = this.moduleId;
+    return viewEngine.loadViewFactory(this.moduleId ? relativeToFile(path, this.moduleId) : path, compileInstruction, loadContext);
+  }
+}) || _class3);
+
+export function resolvedView(namespace, view) {
+  return useViewStrategy(new ResolvedViewStrategy(namespace, view));
 }

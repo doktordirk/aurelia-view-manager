@@ -1,4 +1,4 @@
-import extend from 'extend';
+import mixinDeep from 'mixin-deep';
 
 export class Config {
 
@@ -26,7 +26,7 @@ export class Config {
    * @return {Config} self
    */
   configureDefaults(configs) {
-    extend(true, this.defaults, configs);
+    mixinDeep(this.defaults, configs);
 
     return this;
   }
@@ -43,7 +43,7 @@ export class Config {
     let namespace = Object.create(this.fetch(name));
     let config    = {[name]: namespace};
 
-    extend(true, namespace, configs);
+    mixinDeep(namespace, configs);
     this.configure(config);
 
     return this;
@@ -57,7 +57,7 @@ export class Config {
    * @returns {Config} self
    */
   configure(config) {
-    extend(true, this.namespaces, config);
+    mixinDeep(this.namespaces, config);
 
     return this;
   }
