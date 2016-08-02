@@ -1,11 +1,12 @@
-var _dec, _class2;
+var _dec, _class2, _dec2, _class3;
 
 
 
 import extend from 'extend';
 import { getLogger } from 'aurelia-logging';
 import { inject, Container } from 'aurelia-dependency-injection';
-import { RelativeViewStrategy, useViewStrategy } from 'aurelia-templating';
+import { viewStrategy, useViewStrategy } from 'aurelia-templating';
+import { relativeToFile } from 'aurelia-path';
 
 export var Config = function () {
   function Config() {
@@ -93,7 +94,7 @@ export var ViewManager = (_dec = inject(Config), _dec(_class2 = function () {
     var namespaceOrDefault = Object.create(this.config.fetch(namespace));
     namespaceOrDefault.view = view;
 
-    var location = namespaceOrDefault.map[view] || namespaceOrDefault.location;
+    var location = (namespaceOrDefault.map || {})[view] || namespaceOrDefault.location;
 
     return render(location, namespaceOrDefault);
   };
@@ -118,9 +119,25 @@ function render(template, data) {
   return result;
 }
 
-export function resolvedView(namespace, view) {
-  var viewManager = Container.instance.get(ViewManager);
-  var path = viewManager.resolve(namespace, view);
+export var ResolvedViewStrategy = (_dec2 = viewStrategy(), _dec2(_class3 = function () {
+  function ResolvedViewStrategy(namespace, view) {
+    
 
-  return useViewStrategy(new RelativeViewStrategy(path));
+    this.namespace = namespace;
+    this.view = view;
+  }
+
+  ResolvedViewStrategy.prototype.loadViewFactory = function loadViewFactory(viewEngine, compileInstruction, loadContext) {
+    var viewManager = viewEngine.container.get(ViewManager);
+    var path = viewManager.resolve(this.namespace, this.view);
+
+    compileInstruction.associatedModuleId = this.moduleId;
+    return viewEngine.loadViewFactory(this.moduleId ? relativeToFile(path, this.moduleId) : path, compileInstruction, loadContext);
+  };
+
+  return ResolvedViewStrategy;
+}()) || _class3);
+
+export function resolvedView(namespace, view) {
+  return useViewStrategy(new ResolvedViewStrategy(namespace, view));
 }
